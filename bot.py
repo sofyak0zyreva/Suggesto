@@ -1,22 +1,46 @@
-from database import init_db
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message
-from aiogram.filters import Command
-import asyncio
-import config
-
-bot = Bot(token=config.BOT_TOKEN)
-dp = Dispatcher()
+# bot.py
+from telegram import Update
+from telegram.ext import Application, CommandHandler, CallbackContext, ConversationHandler, MessageHandler, filters
+from handlers import add
+from config import TOKEN
 
 
-@dp.message(Command("start"))
-async def cmd_start(message: Message):
-    await message.answer("👋 Привет! Я помогу вам делиться лучшими фильмами, книгами, треками и местами. Напишите /help, чтобы узнать больше!")
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text(
+        "Привет! Я бот для рекомендаций. Вот доступные команды:\n"
+        "/add – добавить рекомендацию\n"
+        "/rate – оценить рекомендацию\n"
+        "/list – посмотри список рекомендаций\n"
+        "/random – случайная рекомендация\n"
+        "/help – помощь"
+    )
 
 
-async def main():
-    init_db()
-    await dp.start_polling(bot)
+def main():
+    application = Application.builder().token(TOKEN).build()
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    # Определение обработчиков команд
+    application.add_handler(CommandHandler("start", start))
+
+    # Добавление обработчика добавления рекомендаций
+    add_handler = ConversationHandler(
+        entry_points=[CommandHandler("add", add.cmd_add)],
+        states={
+            "CATEGORY": [MessageHandler(filters.TEXT, add.enter_category)],
+            "TITLE": [MessageHandler(filters.TEXT, add.enter_title)],
+            "AUTHOR": [MessageHandler(filters.TEXT, add.enter_author)],
+            "COMMENT": [MessageHandler(filters.TEXT, add.enter_comment)],
+            "RATING": [MessageHandler(filters.TEXT, add.enter_rating)]
+        },
+        fallbacks=[]
+    )
+
+    # Регистрируем обработчики
+    application.add_handler(add_handler)
+
+    # Запускаем бота
+    application.run_polling()
+
+
+if __name__ == '__main__':
+    main()
