@@ -10,7 +10,7 @@ async def start(update: Update, context: CallbackContext) -> None:
         "Привет! Я бот для рекомендаций. Вот доступные команды:\n"
         "/add – добавить рекомендацию\n"
         "/rate – оценить рекомендацию\n"
-        "/list – посмотри список рекомендаций\n"
+        "/list – список рекомендаций\n"
         "/random – случайная рекомендация\n"
         "/help – помощь"
     )
@@ -19,26 +19,21 @@ async def start(update: Update, context: CallbackContext) -> None:
 def main():
     application = Application.builder().token(TOKEN).build()
 
-    # Определение обработчиков команд
     application.add_handler(CommandHandler("start", start))
 
-    # Добавление обработчика добавления рекомендаций
     add_handler = ConversationHandler(
         entry_points=[CommandHandler("add", add.cmd_add)],
         states={
-            "CATEGORY": [MessageHandler(filters.TEXT, add.enter_category)],
-            "TITLE": [MessageHandler(filters.TEXT, add.enter_title)],
-            "AUTHOR": [MessageHandler(filters.TEXT, add.enter_author)],
-            "COMMENT": [MessageHandler(filters.TEXT, add.enter_comment)],
-            "RATING": [MessageHandler(filters.TEXT, add.enter_rating)]
+            add.CATEGORY: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_category)],
+            add.TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_title)],
+            add.AUTHOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_author)],
+            add.COMMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_comment)],
+            add.RATING: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_rating)],
         },
-        fallbacks=[]
+        fallbacks=[],
     )
-
-    # Регистрируем обработчики
     application.add_handler(add_handler)
 
-    # Запускаем бота
     application.run_polling()
 
 

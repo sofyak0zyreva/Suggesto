@@ -1,96 +1,152 @@
 # handlers/add.py
-from telegram import Update
-from telegram.ext import CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from telegram.ext import CallbackContext, ConversationHandler
 from database import Session, Recommendation, User
 
+# Состояния
+CATEGORY, TITLE, AUTHOR, COMMENT, RATING = range(5)
 
-async def cmd_add(update: Update, context: CallbackContext) -> None:
+# Клавиатуры
+CATEGORY_KEYBOARD = ReplyKeyboardMarkup([
+    ["📚 Книга", "🎬 Фильм"],
+    ["📍 Место", "🎵 Музыка"]
+], resize_keyboard=True, one_time_keyboard=True)
+
+SKIP_KEYBOARD = ReplyKeyboardMarkup([
+    [KeyboardButton("Пропустить")]
+], resize_keyboard=True, one_time_keyboard=True)
+
+RATING_KEYBOARD = ReplyKeyboardMarkup([
+    ["⭐️", "⭐️⭐️"],
+    ["⭐️⭐️⭐️", "⭐️⭐️⭐️⭐️"],
+    ["⭐️⭐️⭐️⭐️⭐️"]
+], resize_keyboard=True, one_time_keyboard=True)
+
+# Маппинг эмодзи-категорий на чистые значения
+CATEGORY_MAP = {
+    "📚 Книга": "Книга",
+    "🎬 Фильм": "Фильм",
+    "📍 Место": "Место",
+    "🎵 Музыка": "Музыка"
+}
+
+# Маппинг звездочек на оценку
+STAR_TO_RATING = {
+    "⭐️": 1,
+    "⭐️⭐️": 2,
+    "⭐️⭐️⭐️": 3,
+    "⭐️⭐️⭐️⭐️": 4,
+    "⭐️⭐️⭐️⭐️⭐️": 5
+}
+
+
+async def cmd_add(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text(
-        "Введите категорию для вашей рекомендации (например, книги, фильмы, рестораны):"
+        "Выберите категорию для вашей рекомендации:",
+        reply_markup=CATEGORY_KEYBOARD
     )
-    return "CATEGORY"
+    return CATEGORY
 
 
-async def enter_category(update: Update, context: CallbackContext) -> None:
-    category = update.message.text
-    context.user_data['category'] = category
+async def enter_category(update: Update, context: CallbackContext) -> int:
+    category_emoji = update.message.text
+    if category_emoji not in CATEGORY_MAP:
+        await update.message.reply_text(
+            "Пожалуйста, выберите категорию с помощью кнопок.",
+            reply_markup=CATEGORY_KEYBOARD
+        )
+        return CATEGORY
 
-    # Запрашиваем название рекомендации
-    await update.message.reply_text("Введите название рекомендации:")
-    return "TITLE"
+    context.user_data['category'] = CATEGORY_MAP[category_emoji]
+    await update.message.reply_text(
+        "Введите название рекомендации:",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return TITLE
 
 
-async def enter_title(update: Update, context: CallbackContext) -> None:
+async def enter_title(update: Update, context: CallbackContext) -> int:
     title = update.message.text
     context.user_data['title'] = title
 
-    # Запрашиваем автора (опционально)
-    await update.message.reply_text("Введите автора (необязательно):")
-    return "AUTHOR"
+    await update.message.reply_text(
+        "Введите автора или адрес (по желанию):",
+        reply_markup=SKIP_KEYBOARD
+    )
+    return AUTHOR
 
 
-async def enter_author(update: Update, context: CallbackContext) -> None:
+async def enter_author(update: Update, context: CallbackContext) -> int:
     author = update.message.text
-    context.user_data['author'] = author if author else None
+    context.user_data['author'] = None if author == "Пропустить" else author
 
-    # Запрашиваем комментарий
-    await update.message.reply_text("Введите комментарий (необязательно):")
-    return "COMMENT"
+    await update.message.reply_text(
+        "Введите комментарий (по желанию):",
+        reply_markup=SKIP_KEYBOARD
+    )
+    return COMMENT
 
 
-async def enter_comment(update: Update, context: CallbackContext) -> None:
+async def enter_comment(update: Update, context: CallbackContext) -> int:
     comment = update.message.text
-    context.user_data['comment'] = comment if comment else None
+    context.user_data['comment'] = None if comment == "Пропустить" else comment
 
-    # Запрашиваем оценку
-    await update.message.reply_text("Введите оценку от 1 до 5:")
-    return "RATING"
+    await update.message.reply_text(
+        "Выберите оценку:",
+        reply_markup=RATING_KEYBOARD
+    )
+    return RATING
 
 
-async def enter_rating(update: Update, context: CallbackContext) -> None:
-    rating = update.message.text
-    if rating.isdigit() and 1 <= int(rating) <= 5:
-        rating = int(rating)
-        category = context.user_data['category']
-        title = context.user_data['title']
-        author = context.user_data['author']
-        comment = context.user_data['comment']
+async def enter_rating(update: Update, context: CallbackContext) -> int:
+    stars = update.message.text
+    rating = STAR_TO_RATING.get(stars)
 
-        # Получаем информацию о пользователе
-        user_id = update.message.from_user.id
-        session = Session()
-
-        # Проверим, есть ли пользователь в базе данных
-        user = session.query(User).filter_by(telegram_id=user_id).first()
-        if not user:
-            # Если пользователя нет, добавляем нового
-            user = User(telegram_id=user_id,
-                        username=update.message.from_user.username)
-            session.add(user)
-            session.commit()
-
-        # Сохранение рекомендации
-        recommendation = Recommendation(
-            category=category,
-            title=title,
-            author=author,
-            comment=comment,
-            rating=rating,
-            user_id=user.id
+    if not rating:
+        await update.message.reply_text(
+            "Пожалуйста, выберите оценку с помощью кнопок.",
+            reply_markup=RATING_KEYBOARD
         )
-        session.add(recommendation)
+        return RATING
+
+    category = context.user_data['category']
+    title = context.user_data['title']
+    author = context.user_data['author']
+    comment = context.user_data['comment']
+
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username
+
+    session = Session()
+
+    # Проверяем наличие пользователя
+    user = session.query(User).filter_by(telegram_id=user_id).first()
+    if not user:
+        user = User(telegram_id=user_id, username=username)
+        session.add(user)
         session.commit()
 
-        # Отправка сообщения о добавлении рекомендации
-        await update.message.reply_text(f"✅ Ваша рекомендация добавлена!\n\n"
-                                        f"Категория: {category}\n"
-                                        f"Название: {title}\n"
-                                        f"Автор: {author if author else 'Не указан'}\n"
-                                        f"Комментарий: {comment if comment else 'Не указан'}\n"
-                                        f"Оценка: {rating}/5")
+    # Сохраняем рекомендацию
+    recommendation = Recommendation(
+        category=category,
+        title=title,
+        author=author,
+        comment=comment,
+        rating=rating,
+        user_id=user.id
+    )
+    session.add(recommendation)
+    session.commit()
+    session.close()
 
-        # Завершаем процесс добавления
-        return ConversationHandler.END
-    else:
-        await update.message.reply_text("Пожалуйста, введите оценку от 1 до 5.")
-        return "RATING"
+    await update.message.reply_text(
+        f"✅ Ваша рекомендация добавлена!\n\n"
+        f"Категория: {category}\n"
+        f"Название: {title}\n"
+        f"Автор: {author if author else 'Не указан'}\n"
+        f"Комментарий: {comment if comment else 'Не указан'}\n"
+        f"Оценка: {rating}/5",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+    return ConversationHandler.END
