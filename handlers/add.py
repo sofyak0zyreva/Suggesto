@@ -1,4 +1,3 @@
-# handlers/add.py
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import CallbackContext, ConversationHandler
 from database import Session, Recommendation, User
@@ -39,13 +38,18 @@ STAR_TO_RATING = {
     "⭐️⭐️⭐️⭐️⭐️": 5
 }
 
+# Команда для добавления рекомендации
+
 
 async def cmd_add(update: Update, context: CallbackContext) -> int:
+    print("Пользователь выбрал команду /add. Запрашиваем категорию.")
     await update.message.reply_text(
         "Выберите категорию для вашей рекомендации:",
         reply_markup=CATEGORY_KEYBOARD
     )
     return CATEGORY
+
+# Ввод категории
 
 
 async def enter_category(update: Update, context: CallbackContext) -> int:
@@ -58,11 +62,14 @@ async def enter_category(update: Update, context: CallbackContext) -> int:
         return CATEGORY
 
     context.user_data['category'] = CATEGORY_MAP[category_emoji]
+    print(f"Категория установлена: {context.user_data['category']}")
     await update.message.reply_text(
         "Введите название рекомендации:",
         reply_markup=ReplyKeyboardRemove()
     )
     return TITLE
+
+# Ввод названия
 
 
 async def enter_title(update: Update, context: CallbackContext) -> int:
@@ -95,6 +102,8 @@ async def enter_title(update: Update, context: CallbackContext) -> int:
         )
         return AUTHOR
 
+# Ввод автора или адреса
+
 
 async def enter_author(update: Update, context: CallbackContext) -> int:
     author = update.message.text
@@ -106,6 +115,8 @@ async def enter_author(update: Update, context: CallbackContext) -> int:
     )
     return COMMENT
 
+# Ввод комментария
+
 
 async def enter_comment(update: Update, context: CallbackContext) -> int:
     comment = update.message.text
@@ -116,6 +127,8 @@ async def enter_comment(update: Update, context: CallbackContext) -> int:
         reply_markup=RATING_KEYBOARD
     )
     return RATING
+
+# Ввод оценки
 
 
 async def enter_rating(update: Update, context: CallbackContext) -> int:
@@ -159,6 +172,8 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
     session.commit()
     session.close()
 
+    print("Рекомендация добавлена в базу данных.")
+
     await update.message.reply_text(
         f"✅ Ваша рекомендация добавлена!\n\n"
         f"Категория: {category}\n"
@@ -168,5 +183,9 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
         f"Оценка: {rating}/5",
         reply_markup=ReplyKeyboardRemove()
     )
+
+    # Очищаем данные пользователя
+    print("Очистка данных пользователя после добавления рекомендации.")
+    context.user_data.clear()
 
     return ConversationHandler.END
