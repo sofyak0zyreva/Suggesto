@@ -69,11 +69,31 @@ async def enter_title(update: Update, context: CallbackContext) -> int:
     title = update.message.text
     context.user_data['title'] = title
 
-    await update.message.reply_text(
-        "Введите автора или адрес (по желанию):",
-        reply_markup=SKIP_KEYBOARD
-    )
-    return AUTHOR
+    category = context.user_data['category']
+
+    if category == "Фильм":
+        # Для фильмов пропускаем запрос автора/адреса
+        context.user_data['author'] = None
+        await update.message.reply_text(
+            "Введите комментарий (по желанию):",
+            reply_markup=SKIP_KEYBOARD
+        )
+        return COMMENT
+    else:
+        # В зависимости от категории спрашиваем по-разному
+        if category == "Книга" or category == "Музыка":
+            prompt = "Введите автора (по желанию):"
+        elif category == "Место":
+            prompt = "Введите адрес (по желанию):"
+        else:
+            # на всякий случай
+            prompt = "Введите автора или адрес (по желанию):"
+
+        await update.message.reply_text(
+            prompt,
+            reply_markup=SKIP_KEYBOARD
+        )
+        return AUTHOR
 
 
 async def enter_author(update: Update, context: CallbackContext) -> int:
