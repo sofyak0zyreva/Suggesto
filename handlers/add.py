@@ -1,71 +1,53 @@
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-from telegram.ext import CallbackContext, ConversationHandler
+# add.py
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHandler, MessageHandler, filters
 from database import Session, Recommendation, User
 
 # Состояния
 CATEGORY, TITLE, AUTHOR, COMMENT, RATING = range(5)
 
 # Клавиатуры
-CATEGORY_KEYBOARD = ReplyKeyboardMarkup([
-    ["📚 Книга", "🎬 Фильм"],
-    ["📍 Место", "🎵 Музыка"]
-], resize_keyboard=True, one_time_keyboard=True)
+CATEGORY_KEYBOARD = InlineKeyboardMarkup([
+    [InlineKeyboardButton("📚 Книга", callback_data="Книга"),
+     InlineKeyboardButton("🎬 Фильм", callback_data="Фильм")],
+    [InlineKeyboardButton("📍 Место", callback_data="Место"), InlineKeyboardButton(
+        "🎵 Музыка", callback_data="Музыка")]
+])
 
-SKIP_KEYBOARD = ReplyKeyboardMarkup([
-    [KeyboardButton("Пропустить")]
-], resize_keyboard=True, one_time_keyboard=True)
+RATING_KEYBOARD = InlineKeyboardMarkup([
+    [InlineKeyboardButton("⭐️", callback_data="1"),
+     InlineKeyboardButton("⭐️⭐️", callback_data="2")],
+    [InlineKeyboardButton("⭐️⭐️⭐️", callback_data="3"),
+     InlineKeyboardButton("⭐️⭐️⭐️⭐️", callback_data="4")],
+    [InlineKeyboardButton("⭐️⭐️⭐️⭐️⭐️", callback_data="5")]
+])
 
-RATING_KEYBOARD = ReplyKeyboardMarkup([
-    ["⭐️", "⭐️⭐️"],
-    ["⭐️⭐️⭐️", "⭐️⭐️⭐️⭐️"],
-    ["⭐️⭐️⭐️⭐️⭐️"]
-], resize_keyboard=True, one_time_keyboard=True)
-
-# Маппинг эмодзи-категорий на чистые значения
-CATEGORY_MAP = {
-    "📚 Книга": "Книга",
-    "🎬 Фильм": "Фильм",
-    "📍 Место": "Место",
-    "🎵 Музыка": "Музыка"
-}
-
-# Маппинг звездочек на оценку
-STAR_TO_RATING = {
-    "⭐️": 1,
-    "⭐️⭐️": 2,
-    "⭐️⭐️⭐️": 3,
-    "⭐️⭐️⭐️⭐️": 4,
-    "⭐️⭐️⭐️⭐️⭐️": 5
-}
+SKIP_KEYBOARD = InlineKeyboardMarkup([
+    [InlineKeyboardButton("Пропустить", callback_data="skip")]
+])
 
 # Команда для добавления рекомендации
 
 
 async def cmd_add(update: Update, context: CallbackContext) -> int:
-    print("Пользователь выбрал команду /add. Запрашиваем категорию.")
+    context.user_data.clear()
     await update.message.reply_text(
         "Выберите категорию для вашей рекомендации:",
         reply_markup=CATEGORY_KEYBOARD
     )
     return CATEGORY
 
-# Ввод категории
+# Выбор категории
 
 
 async def enter_category(update: Update, context: CallbackContext) -> int:
-    category_emoji = update.message.text
-    if category_emoji not in CATEGORY_MAP:
-        await update.message.reply_text(
-            "Пожалуйста, выберите категорию с помощью кнопок.",
-            reply_markup=CATEGORY_KEYBOARD
-        )
-        return CATEGORY
+    query = update.callback_query
+    await query.answer()
+    category = query.data
 
-    context.user_data['category'] = CATEGORY_MAP[category_emoji]
-    print(f"Категория установлена: {context.user_data['category']}")
-    await update.message.reply_text(
-        "Введите название рекомендации:",
-        reply_markup=ReplyKeyboardRemove()
+    context.user_data['category'] = category
+    await query.edit_message_text(
+        "Введите название рекомендации:"
     )
     return TITLE
 
@@ -79,7 +61,6 @@ async def enter_title(update: Update, context: CallbackContext) -> int:
     category = context.user_data['category']
 
     if category == "Фильм":
-        # Для фильмов пропускаем запрос автора/адреса
         context.user_data['author'] = None
         await update.message.reply_text(
             "Введите комментарий (по желанию):",
@@ -87,79 +68,80 @@ async def enter_title(update: Update, context: CallbackContext) -> int:
         )
         return COMMENT
     else:
-        # В зависимости от категории спрашиваем по-разному
-        if category == "Книга" or category == "Музыка":
-            prompt = "Введите автора (по желанию):"
-        elif category == "Место":
-            prompt = "Введите адрес (по желанию):"
-        else:
-            # на всякий случай
-            prompt = "Введите автора или адрес (по желанию):"
-
+        prompt = "Введите автора (по желанию):" if category in [
+            "Книга", "Музыка"] else "Введите адрес (по желанию):"
         await update.message.reply_text(
             prompt,
             reply_markup=SKIP_KEYBOARD
         )
         return AUTHOR
 
-# Ввод автора или адреса
+# Ввод автора/адреса
 
 
 async def enter_author(update: Update, context: CallbackContext) -> int:
-    author = update.message.text
-    context.user_data['author'] = None if author == "Пропустить" else author
-
-    await update.message.reply_text(
-        "Введите комментарий (по желанию):",
-        reply_markup=SKIP_KEYBOARD
-    )
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        context.user_data['author'] = None
+        await query.edit_message_text(
+            "Введите комментарий (по желанию):",
+            reply_markup=SKIP_KEYBOARD
+        )
+    else:
+        author = update.message.text
+        context.user_data['author'] = author
+        await update.message.reply_text(
+            "Введите комментарий (по желанию):",
+            reply_markup=SKIP_KEYBOARD
+        )
     return COMMENT
 
 # Ввод комментария
 
 
 async def enter_comment(update: Update, context: CallbackContext) -> int:
-    comment = update.message.text
-    context.user_data['comment'] = None if comment == "Пропустить" else comment
-
-    await update.message.reply_text(
-        "Выберите оценку:",
-        reply_markup=RATING_KEYBOARD
-    )
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        context.user_data['comment'] = None
+        await query.edit_message_text(
+            "Выберите оценку:",
+            reply_markup=RATING_KEYBOARD
+        )
+    else:
+        comment = update.message.text
+        context.user_data['comment'] = comment
+        await update.message.reply_text(
+            "Выберите оценку:",
+            reply_markup=RATING_KEYBOARD
+        )
     return RATING
 
-# Ввод оценки
+# Выбор рейтинга
 
 
 async def enter_rating(update: Update, context: CallbackContext) -> int:
-    stars = update.message.text
-    rating = STAR_TO_RATING.get(stars)
-
-    if not rating:
-        await update.message.reply_text(
-            "Пожалуйста, выберите оценку с помощью кнопок.",
-            reply_markup=RATING_KEYBOARD
-        )
-        return RATING
+    query = update.callback_query
+    await query.answer()
+    rating = int(query.data)
 
     category = context.user_data['category']
     title = context.user_data['title']
     author = context.user_data['author']
     comment = context.user_data['comment']
 
-    user_id = update.message.from_user.id
-    username = update.message.from_user.username
+    user_id = query.from_user.id
+    username = query.from_user.username
 
     session = Session()
 
-    # Проверяем наличие пользователя
     user = session.query(User).filter_by(telegram_id=user_id).first()
     if not user:
         user = User(telegram_id=user_id, username=username)
         session.add(user)
         session.commit()
 
-    # Сохраняем рекомендацию
     recommendation = Recommendation(
         category=category,
         title=title,
@@ -172,20 +154,13 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
     session.commit()
     session.close()
 
-    print("Рекомендация добавлена в базу данных.")
-
-    await update.message.reply_text(
+    await query.edit_message_text(
         f"✅ Ваша рекомендация добавлена!\n\n"
         f"Категория: {category}\n"
         f"Название: {title}\n"
         f"Автор: {author if author else 'Не указан'}\n"
         f"Комментарий: {comment if comment else 'Не указан'}\n"
-        f"Оценка: {rating}/5",
-        reply_markup=ReplyKeyboardRemove()
+        f"Оценка: {rating}/5"
     )
-
-    # Очищаем данные пользователя
-    print("Очистка данных пользователя после добавления рекомендации.")
     context.user_data.clear()
-
     return ConversationHandler.END

@@ -1,14 +1,13 @@
-# bot.py
-from handlers import list as list_handler
 from telegram import Update
-from telegram.ext import Application, CommandHandler, CallbackContext, ConversationHandler, MessageHandler, filters
-from handlers import add, list as list_handler
+from telegram.ext import Application, CommandHandler, CallbackContext, ConversationHandler, MessageHandler, filters, CallbackQueryHandler
+from handlers import add, list, rate
 from config import TOKEN
 
 
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(
-        "Привет! Я бот для рекомендаций. Вот доступные команды:\n"
+        "Привет! Я бот для рекомендаций.\n" 
+        "📚 Фильмы, книги, музыка, места – всё в одном месте!🔹 Как начать?\n"
         "/add – добавить рекомендацию\n"
         "/rate – оценить рекомендацию\n"
         "/list – список рекомендаций\n"
@@ -22,33 +21,41 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
 
-    # Обработчик для добавления рекомендаций
-    add_handler = ConversationHandler(
-        entry_points=[CommandHandler("add", add.cmd_add)],
+    add_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('add', add.cmd_add)],
         states={
-            add.CATEGORY: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_category)],
+            add.CATEGORY: [CallbackQueryHandler(add.enter_category)],
             add.TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_title)],
-            add.AUTHOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_author)],
-            add.COMMENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_comment)],
-            add.RATING: [MessageHandler(filters.TEXT & ~filters.COMMAND, add.enter_rating)],
-        },
-        fallbacks=[],
-    )
-    application.add_handler(add_handler)
-
-    # Обработчик для списка рекомендаций
-    list_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("list", list_handler.cmd_list)],
-        states={
-            list_handler.CATEGORY: [MessageHandler(filters.TEXT, list_handler.enter_category)],
-            list_handler.SORTING: [MessageHandler(filters.TEXT, list_handler.enter_sorting)],
-            list_handler.PAGINATION: [MessageHandler(filters.TEXT, list_handler.navigate)],
+            add.AUTHOR: [
+                CallbackQueryHandler(add.enter_author, pattern="^skip$"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND,
+                               add.enter_author)
+            ],
+            add.COMMENT: [
+                CallbackQueryHandler(add.enter_comment, pattern="^skip$"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND,
+                               add.enter_comment)
+            ],
+            add.RATING: [CallbackQueryHandler(add.enter_rating)],
         },
         fallbacks=[]
     )
 
-    application.add_handler(list_conv_handler)
 
+    # ConversationHandler для команды /list
+    list_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('list', list.cmd_list)],
+        states={
+            list.CATEGORY: [CallbackQueryHandler(list.enter_category)],
+            list.SORTING: [CallbackQueryHandler(list.enter_sorting)],
+            list.PAGINATION: [CallbackQueryHandler(list.navigate)],
+        },
+        fallbacks=[]
+    )
+    application.add_handler(add_conv_handler)
+
+
+    application.add_handler(list_conv_handler)
     application.run_polling()
 
 
