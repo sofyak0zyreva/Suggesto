@@ -52,10 +52,22 @@ def main():
         },
         fallbacks=[]
     )
+
+    # Сам ConversationHandler для bot.py
+    rate_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('rate', rate.cmd_rate)],
+        states={
+            rate.CATEGORY: [CallbackQueryHandler(rate.enter_category)],
+            rate.RECOMMENDATION: [CallbackQueryHandler(rate.enter_recommendation)],
+            rate.RATING: [CallbackQueryHandler(rate.enter_rating)],
+        },
+        fallbacks=[]
+    )
+
     application.add_handler(add_conv_handler)
-
-
     application.add_handler(list_conv_handler)
+    application.add_handler(rate_conv_handler)
+
     application.run_polling()
 
 
