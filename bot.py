@@ -1,7 +1,8 @@
 # bot.py
+from handlers import list as list_handler
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext, ConversationHandler, MessageHandler, filters
-from handlers import add
+from handlers import add, list as list_handler
 from config import TOKEN
 
 
@@ -21,6 +22,7 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
 
+    # Обработчик для добавления рекомендаций
     add_handler = ConversationHandler(
         entry_points=[CommandHandler("add", add.cmd_add)],
         states={
@@ -33,6 +35,19 @@ def main():
         fallbacks=[],
     )
     application.add_handler(add_handler)
+
+    # Обработчик для списка рекомендаций
+    list_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("list", list_handler.cmd_list)],
+        states={
+            list_handler.CATEGORY: [MessageHandler(filters.TEXT, list_handler.enter_category)],
+            list_handler.SORTING: [MessageHandler(filters.TEXT, list_handler.enter_sorting)],
+            list_handler.PAGINATION: [MessageHandler(filters.TEXT, list_handler.navigate)],
+        },
+        fallbacks=[]
+    )
+
+    application.add_handler(list_conv_handler)
 
     application.run_polling()
 
