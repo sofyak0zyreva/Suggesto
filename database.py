@@ -1,5 +1,4 @@
-# database.py
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
@@ -31,9 +30,23 @@ class Recommendation(Base):
     author = Column(String(200), nullable=True)
     comment = Column(Text, nullable=True)
     rating = Column(Integer, nullable=False)
-
+    rating_count = Column(Integer, default=0)
+    average_rating = Column(Float, default=0.0)
+    
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
 
+
+class Rating(Base):
+    __tablename__ = 'ratings'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    recommendation_id = Column(Integer, ForeignKey(
+        'recommendations.id'), nullable=False)
+    rating = Column(Integer, nullable=False)  # 1-5
+
+    user = relationship("User", backref="ratings")
+    recommendation = relationship("Recommendation", backref="ratings")
 
 # Создание подключения к базе данных
 engine = create_engine('sqlite:///recommendations.db')
