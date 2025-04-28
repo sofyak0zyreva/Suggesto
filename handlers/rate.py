@@ -21,7 +21,7 @@ RATING_KEYBOARD = InlineKeyboardMarkup([
     [InlineKeyboardButton("⭐️⭐️⭐️⭐️⭐️", callback_data="5")]
 ])
 
-# Команда для оценки
+# Команда для начала оценки
 
 
 async def cmd_rate(update: Update, context: CallbackContext) -> int:
@@ -76,6 +76,7 @@ async def enter_recommendation(update: Update, context: CallbackContext) -> int:
     await query.answer()
     recommendation_id = int(query.data.split(":")[1])
 
+    # Сохраняем ID выбранной рекомендации
     context.user_data['recommendation_id'] = recommendation_id
 
     # Получаем выбранную рекомендацию из базы данных
@@ -99,6 +100,9 @@ async def enter_recommendation(update: Update, context: CallbackContext) -> int:
         await query.edit_message_text(f"Вы уже оценили эту рекомендацию. Ваш рейтинг: {existing_rating.rating}⭐")
         return ConversationHandler.END
 
+    # Сохраняем рекомендацию в context для использования в следующем шаге
+    context.user_data['recommendation'] = recommendation
+
     # Отправляем пользователю клавиатуру для выбора рейтинга
     await query.edit_message_text(
         "Выберите оценку для этой рекомендации:",
@@ -114,10 +118,6 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
     await query.answer()
     rating = int(query.data)
 
-    recommendation_id = context.user_data['recommendation_id']
-    user_id = query.from_user.id
-
-    # Получаем объект recommendation из context (предположим, что он был загружен заранее)
     recommendation = context.user_data.get('recommendation')
 
     if recommendation is None:
@@ -125,31 +125,35 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
         context.user_data.clear()
         return ConversationHandler.END
 
+    user_id = query.from_user.id
+    recommendation_id = recommendation.id
+
     # Проверяем, чтобы рейтинг был корректным
     if rating < 1 or rating > 5:
         await query.edit_message_text("Ошибка: рейтинг должен быть от 1 до 5.")
         context.user_data.clear()
         return ConversationHandler.END
 
-    # Создаем новый рейтинг (предположим, что у нас есть способ добавить его в список)
-    new_rating = {'user_id': user_id, 'rating': rating}
+    # Создаем новый рейтинг и сохраняем его в базе данных
+    session = Session()
+    new_rating = Rating(
+        user_id=user_id, recommendation_id=recommendation_id, rating=rating)
+    session.add(new_rating)
 
-    # Добавляем новый рейтинг в рекомендации
-    if 'ratings' not in recommendation:
-        recommendation['ratings'] = []
+    # Пересчитываем средний рейтинг для рекомендации
+    all_ratings = session.query(Rating).filter_by(
+        recommendation_id=recommendation_id).all()
+    total_rating = sum(rating.rating for rating in all_ratings)
+    recommendation.average_rating = total_rating / len(all_ratings)
+    recommendation.rating_count = len(all_ratings)
 
-    recommendation['ratings'].append(new_rating)
+    session.commit()
+    session.close()
 
-    # Пересчитываем средний рейтинг
-    total_rating = sum(r['rating'] for r in recommendation['ratings'])
-    rating_count = len(recommendation['ratings'])
-    recommendation['average_rating'] = total_rating / rating_count
-    recommendation['rating_count'] = rating_count
-
-    # Отправляем сообщение с обновленным рейтингом
+    # Отправляем сообщение с подтверждением
     await query.edit_message_text(
         f"✅ Ваш рейтинг: {rating}⭐\n"
-        f"Средний рейтинг: {recommendation['average_rating']:.2f}/5 ({recommendation['rating_count']} оценок)"
+        f"Средний рейтинг: {recommendation.average_rating:.2f}/5 ({recommendation.rating_count} оценок)"
     )
 
     # Очищаем user_data после завершения
