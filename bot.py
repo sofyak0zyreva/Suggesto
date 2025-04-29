@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext, ConversationHandler, MessageHandler, filters, CallbackQueryHandler
-from handlers import add, list, rate, random
+from handlers import add, list, rate, random, help
 from config import TOKEN
 
 
@@ -20,6 +20,8 @@ def main():
     application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
+
+    application.add_handler(CommandHandler("help", help.cmd_help))
 
     add_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('add', add.cmd_add)],
