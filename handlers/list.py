@@ -1,7 +1,7 @@
 # list.py
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, ConversationHandler
-from database import Session, Recommendation
+from database import Session, Recommendation, User
 
 # Состояния
 CATEGORY, SORTING, PAGINATION = range(3)
@@ -41,12 +41,26 @@ async def enter_category(update: Update, context: CallbackContext) -> int:
     await query.answer()
     category = query.data
 
+    user_id = query.from_user.id
+    username = query.from_user.username
+
+    session = Session()
+
+    user = session.query(User).filter_by(telegram_id=user_id).first()
+    if not user:
+        user = User(telegram_id=user_id, username=username)
+        session.add(user)
+        session.commit()
+
+    user_id = user.id
+    print(f"user_id in enter_category", user_id)
+
     context.user_data['category'] = category
     context.user_data['page'] = 0
 
     session = Session()
     recommendations = session.query(
-        Recommendation).filter_by(category=category).all()
+        Recommendation).filter_by(category=category, user_id=user_id).all()
     session.close()
 
     if not recommendations:
@@ -66,11 +80,25 @@ async def enter_sorting(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     await query.answer()
     sorting = query.data
+    user_id = query.from_user.id
+    username = query.from_user.username
+
+    session = Session()
+
+    user = session.query(User).filter_by(telegram_id=user_id).first()
+    if not user:
+        user = User(telegram_id=user_id, username=username)
+        session.add(user)
+        session.commit()
+
+    user_id = user.id
+    print(f"user_id in enter_sorting", user_id)
 
     category = context.user_data['category']
 
     session = Session()
-    query_db = session.query(Recommendation).filter_by(category=category)
+    query_db = session.query(Recommendation).filter_by(
+        category=category, user_id=user_id)
     if sorting == "rating":
         query_db = query_db.order_by(Recommendation.rating.desc())
     else:
@@ -155,8 +183,7 @@ async def navigate(update: Update, context: CallbackContext) -> int:
         await query.edit_message_text(
             "\n".join(parts),
             reply_markup=NAVIGATION_KEYBOARD
-    )
-
+        )
 
     elif text == "close":
         await query.edit_message_text("Вы завершили просмотр.")

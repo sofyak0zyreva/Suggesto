@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, ConversationHandler
-from database import Session, Recommendation
+from database import Session, Recommendation, User
 import random
 
 # Состояния
@@ -38,6 +38,20 @@ async def show_random(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     await query.answer()
 
+    user_id = query.from_user.id
+    username = query.from_user.username
+
+    session = Session()
+
+    user = session.query(User).filter_by(telegram_id=user_id).first()
+    if not user:
+        user = User(telegram_id=user_id, username=username)
+        session.add(user)
+        session.commit()
+    user_id = user.id
+    print(f"user_id in rate: enter_recommendation", user_id)
+
+
     # Обработка первой категории или запроса ещё одной
     if query.data != "another":
         context.user_data['category'] = query.data
@@ -46,7 +60,7 @@ async def show_random(update: Update, context: CallbackContext) -> int:
 
     session = Session()
     recommendations = session.query(
-        Recommendation).filter_by(category=category).all()
+        Recommendation).filter_by(category=category, user_id=user_id).all()
     session.close()
 
     if not recommendations:
@@ -58,7 +72,7 @@ async def show_random(update: Update, context: CallbackContext) -> int:
     # Формируем сообщение динамически
     message_lines = [
         f"🎲 Твой случайный выбор:",
-        f"🏆 {rec.title} – ⭐ {rec.average_rating:.1f}/5"
+        f"🏆 {rec.title} – ⭐ {rec.rating:.1f}/5"
     ]
 
     if rec.author:

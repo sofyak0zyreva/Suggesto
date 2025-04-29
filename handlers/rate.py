@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, ConversationHandler
-from database import Session, Recommendation, Rating
+from database import Session, Recommendation, Rating, User
 
 # Состояния
 CATEGORY, RECOMMENDATION, RATING = range(3)
@@ -40,12 +40,26 @@ async def enter_category(update: Update, context: CallbackContext) -> int:
     await query.answer()
     category = query.data
 
+    user_id = query.from_user.id
+    username = query.from_user.username
+
+    session = Session()
+
+    user = session.query(User).filter_by(telegram_id=user_id).first()
+    if not user:
+        user = User(telegram_id=user_id, username=username)
+        session.add(user)
+        session.commit()
+
+    user_id = user.id
+    print(f"user_id in rate: enter_category", user_id)
+
     context.user_data['category'] = category
     context.user_data['page'] = 0
 
     session = Session()
     recommendations = session.query(
-        Recommendation).filter_by(category=category).all()
+        Recommendation).filter_by(category=category, user_id=user_id).all()
     session.close()
 
     if not recommendations:
@@ -91,6 +105,18 @@ async def enter_recommendation(update: Update, context: CallbackContext) -> int:
 
     # Проверяем, ставил ли пользователь уже рейтинг
     user_id = query.from_user.id
+    username = query.from_user.username
+
+    session = Session()
+
+    user = session.query(User).filter_by(telegram_id=user_id).first()
+    if not user:
+        user = User(telegram_id=user_id, username=username)
+        session.add(user)
+        session.commit()
+    user_id = user.id
+    print(f"user_id in rate: enter_recommendation", user_id)
+
     session = Session()
     existing_rating = session.query(Rating).filter_by(
         recommendation_id=recommendation_id, user_id=user_id).first()
