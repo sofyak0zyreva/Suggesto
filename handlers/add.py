@@ -1,7 +1,7 @@
 # add.py
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackContext, ConversationHandler, CallbackQueryHandler, MessageHandler, filters
-from database import Session, Recommendation, User
+from database import Session, Recommendation, User, Rating
 
 # Состояния
 CATEGORY, TITLE, AUTHOR, COMMENT, RATING = range(5)
@@ -151,6 +151,15 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
         user_id=user.id
     )
     session.add(recommendation)
+    session.commit()
+    
+    initial_rating = Rating(
+        user_id=user.id,
+        recommendation_id=recommendation.id,
+        rating=rating
+    )
+    session.add(initial_rating)
+
     session.commit()
     session.close()
 
