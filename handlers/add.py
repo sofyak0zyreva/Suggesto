@@ -132,6 +132,7 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
     comment = context.user_data['comment']
 
     user_id = query.from_user.id
+    print(f"user_id in add: enter_rating", user_id)
     username = query.from_user.username
 
     session = Session()
@@ -152,7 +153,7 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
     )
     session.add(recommendation)
     session.commit()
-    
+
     initial_rating = Rating(
         user_id=user.id,
         recommendation_id=recommendation.id,

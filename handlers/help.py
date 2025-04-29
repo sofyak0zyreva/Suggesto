@@ -8,7 +8,6 @@ async def cmd_help(update: Update, context: CallbackContext) -> None:
         "🔹 Добавить рекомендацию → /add\n"
         "🔹 Оценить что-то → /rate\n"
         "🔹 Посмотреть список рекомендаций → /list\n"
-        "🔹 Получить случайную рекомендацию → /random\n"
-        "🔹 Настроить напоминания → /reminder"
+        "🔹 Получить случайную рекомендацию → /random"
     )
     await update.message.reply_text(help_text)

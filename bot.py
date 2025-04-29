@@ -24,7 +24,6 @@ async def set_bot_commands(app):
         BotCommand("rate", "Оценить что-то"),
         BotCommand("random", "Случайная рекомендация"),
         BotCommand("list", "Список рекомендаций"),
-        BotCommand("reminder", "Настроить напоминания"),
         BotCommand("help", "Показать помощь"),
     ]
     await app.bot.set_my_commands(commands)
