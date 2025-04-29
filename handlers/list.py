@@ -142,13 +142,21 @@ async def navigate(update: Update, context: CallbackContext) -> int:
     elif text == "random":
         import random
         rec = random.choice(recommendations)
+
+        parts = [
+            "🎲 Случайная рекомендация:\n",
+            f"{rec.title} — ⭐️ {rec.rating}/5"
+        ]
+        if rec.author:
+            parts.append(f"✍️ {rec.author}")
+        if rec.comment:
+            parts.append(f"💬 {rec.comment}")
+
         await query.edit_message_text(
-            f"🎲 Случайная рекомендация:\n\n"
-            f"{rec.title} — ⭐️ {rec.rating}/5\n"
-            f"✍️ {rec.author if rec.author else 'Нет автора'}\n"
-            f"💬 {rec.comment if rec.comment else 'Нет комментария'}",
+            "\n".join(parts),
             reply_markup=NAVIGATION_KEYBOARD
-        )
+    )
+
 
     elif text == "close":
         await query.edit_message_text("Вы завершили просмотр.")
