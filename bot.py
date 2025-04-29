@@ -1,12 +1,12 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext, ConversationHandler, MessageHandler, filters, CallbackQueryHandler
-from handlers import add, list, rate
+from handlers import add, list, rate, random
 from config import TOKEN
 
 
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(
-        "Привет! Я бот для рекомендаций.\n" 
+        "Привет! Я бот для рекомендаций.\n"
         "📚 Фильмы, книги, музыка, места – всё в одном месте!🔹 Как начать?\n"
         "/add – добавить рекомендацию\n"
         "/rate – оценить рекомендацию\n"
@@ -41,7 +41,6 @@ def main():
         fallbacks=[]
     )
 
-
     # ConversationHandler для команды /list
     list_conv_handler = ConversationHandler(
         entry_points=[CommandHandler('list', list.cmd_list)],
@@ -64,9 +63,24 @@ def main():
         fallbacks=[]
     )
 
+    random_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('random', random.cmd_random)],
+        states={
+            random.CATEGORY: [
+                CallbackQueryHandler(
+                    random.show_random, pattern="^(Книга|Фильм|Место|Музыка|another)$"),
+                CallbackQueryHandler(random.cancel_random, pattern="^close$")
+            ],
+        },
+        fallbacks=[]
+    )
+
+
+
     application.add_handler(add_conv_handler)
     application.add_handler(list_conv_handler)
     application.add_handler(rate_conv_handler)
+    application.add_handler(random_conv_handler)
 
     application.run_polling()
 
