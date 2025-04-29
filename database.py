@@ -1,3 +1,4 @@
+import os
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -48,8 +49,11 @@ class Rating(Base):
     user = relationship("User", backref="ratings")
     recommendation = relationship("Recommendation", backref="ratings")
 
+
+DATABASE_URL = os.getenv('DATABASE_URL') or "sqlite:///recommendations.db"
+
 # Создание подключения к базе данных
-engine = create_engine('sqlite:///recommendations.db')
+engine = create_engine(DATABASE_URL)
 
 # Создание всех таблиц в базе данных
 Base.metadata.create_all(engine)

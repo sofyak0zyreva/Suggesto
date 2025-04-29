@@ -1,3 +1,4 @@
+import os
 from telegram import BotCommand, Update
 from telegram.ext import (
     Application, CommandHandler, ConversationHandler,
@@ -30,6 +31,7 @@ async def set_bot_commands(app):
 
 
 def main():
+    TOKEN = os.getenv("TOKEN")
     application = Application.builder().token(
         TOKEN).post_init(set_bot_commands).build()
 
