@@ -153,7 +153,7 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
     # Отправляем сообщение с подтверждением
     await query.edit_message_text(
         f"✅ Ваш рейтинг: {rating}⭐\n"
-        f"Средний рейтинг: {recommendation.average_rating:.2f}/5 ({recommendation.rating_count} оценок)"
+        f"Средний рейтинг: {recommendation.average_rating:.2f}/5 "
     )
 
     # Очищаем user_data после завершения
