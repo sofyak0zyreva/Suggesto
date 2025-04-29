@@ -5,8 +5,7 @@ from telegram.ext import (
     CallbackQueryHandler, CallbackContext, MessageHandler, filters
 )
 from handlers import add, list, rate, random, help
-from config import TOKEN
-
+from dotenv import load_dotenv
 
 async def start(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(
@@ -31,7 +30,9 @@ async def set_bot_commands(app):
 
 
 def main():
-    TOKEN = os.getenv("TOKEN")
+    load_dotenv()
+    TOKEN = os.getenv('TOKEN')
+    print(TOKEN)
     application = Application.builder().token(
         TOKEN).post_init(set_bot_commands).build()
 

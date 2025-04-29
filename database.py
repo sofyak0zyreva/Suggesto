@@ -2,7 +2,7 @@ import os
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
-
+from dotenv import load_dotenv
 # Определяем базовый класс для всех моделей
 Base = declarative_base()
 
@@ -50,6 +50,7 @@ class Rating(Base):
     recommendation = relationship("Recommendation", backref="ratings")
 
 
+load_dotenv()
 DATABASE_URL = os.getenv('DATABASE_URL') or "sqlite:///recommendations.db"
 
 # Создание подключения к базе данных
