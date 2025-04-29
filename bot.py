@@ -34,7 +34,7 @@ def main():
     application = Application.builder().token(
         TOKEN).post_init(set_bot_commands).build()
 
-    # application.add_handler(CommandHandler("start", menu.start))
+    application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help.cmd_help))
 
     application.add_handler(ConversationHandler(
