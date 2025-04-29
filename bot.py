@@ -1,25 +1,34 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackContext, ConversationHandler, MessageHandler, filters, CallbackQueryHandler
 from handlers import add, list, rate, random, help
+import menu
 from config import TOKEN
 
 
-async def start(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text(
-        "Привет! Я бот для рекомендаций.\n"
-        "📚 Фильмы, книги, музыка, места – всё в одном месте!🔹 Как начать?\n"
-        "/add – добавить рекомендацию\n"
-        "/rate – оценить рекомендацию\n"
-        "/list – список рекомендаций\n"
-        "/random – случайная рекомендация\n"
-        "/help – помощь"
-    )
+# async def start(update: Update, context: CallbackContext) -> None:
+#     await update.message.reply_text(
+#         "Привет! Я бот для рекомендаций.\n"
+#         "📚 Фильмы, книги, музыка, места – всё в одном месте!🔹 Как начать?\n"
+#         "/add – добавить рекомендацию\n"
+#         "/rate – оценить рекомендацию\n"
+#         "/list – список рекомендаций\n"
+#         "/random – случайная рекомендация\n"
+#         "/help – помощь"
+#     )
 
 
 def main():
     application = Application.builder().token(TOKEN).build()
 
-    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("start", menu.start))
+    # application.add_handler(MessageHandler(
+    #     filters.TEXT & ~filters.COMMAND, menu.handle_menu_selection))
+
+    application.add_handler(MessageHandler(
+        filters.Regex('^≡ Меню$'), menu.show_menu))
+
+    # Обработчик callback-запросов от кнопок меню
+    application.add_handler(CallbackQueryHandler(menu.handle_menu_commands))
 
     application.add_handler(CommandHandler("help", help.cmd_help))
 
@@ -77,12 +86,11 @@ def main():
         fallbacks=[]
     )
 
-
-
     application.add_handler(add_conv_handler)
     application.add_handler(list_conv_handler)
     application.add_handler(rate_conv_handler)
     application.add_handler(random_conv_handler)
+   
 
     application.run_polling()
 
