@@ -135,6 +135,10 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
     print(f"user_id in add: enter_rating", user_id)
     username = query.from_user.username
 
+    chat_id = update.effective_chat.id
+    print(f"chat_id in add: enter_rating", chat_id)
+    chat = update.effective_chat
+    print(f"chat type in add: enter_rating", chat.type)
     session = Session()
 
     user = session.query(User).filter_by(telegram_id=user_id).first()
