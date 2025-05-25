@@ -35,6 +35,7 @@ class Recommendation(Base):
     average_rating = Column(Float, default=0.0)
     
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    chat_id = Column(Integer, nullable=True)
 
 
 class Rating(Base):
@@ -51,6 +52,7 @@ class Rating(Base):
 
 
 load_dotenv()
+# DATABASE_URL = "sqlite:///recommendations.db"
 DATABASE_URL = os.getenv('DATABASE_URL') or "sqlite:///recommendations.db"
 
 # Создание подключения к базе данных

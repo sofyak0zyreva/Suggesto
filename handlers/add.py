@@ -153,7 +153,8 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
         author=author,
         comment=comment,
         rating=rating,
-        user_id=user.id
+        user_id=user.id,
+        chat_id=chat_id
     )
     session.add(recommendation)
     session.commit()

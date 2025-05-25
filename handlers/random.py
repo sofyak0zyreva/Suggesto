@@ -59,8 +59,22 @@ async def show_random(update: Update, context: CallbackContext) -> int:
     category = context.user_data['category']
 
     session = Session()
-    recommendations = session.query(
-        Recommendation).filter_by(category=category, user_id=user_id).all()
+    
+    chat = update.effective_chat
+    if chat.type == "private":
+        # личный чат: только свои рекомендации
+        recommendations = session.query(Recommendation).filter_by(
+            category=category,
+            user_id=user_id
+        ).all()
+    else:
+        # групповой чат: все рекомендации чата
+        recommendations = session.query(Recommendation).filter_by(
+            category=category,
+            chat_id=chat.id
+        ).all()
+    # recommendations = session.query(
+    #     Recommendation).filter_by(category=category, user_id=user_id).all()
     session.close()
 
     if not recommendations:
