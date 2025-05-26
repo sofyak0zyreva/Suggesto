@@ -178,7 +178,7 @@ async def navigate(update: Update, context: CallbackContext) -> int:
     await query.answer()
     text = query.data
 
-    page = context.user_data['page']
+    page = context.user_data.get('page', 0)
     recommendations = context.user_data['recommendations']
 
     if text == "prev":
