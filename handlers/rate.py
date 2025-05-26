@@ -165,6 +165,7 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
         return ConversationHandler.END
 
     user_id = query.from_user.id
+    username = query.from_user.username
     recommendation_id = recommendation.id
 
     # Проверяем, чтобы рейтинг был корректным
@@ -175,6 +176,13 @@ async def enter_rating(update: Update, context: CallbackContext) -> int:
 
     # Создаем новый рейтинг и сохраняем его в базе данных
     session = Session()
+    user = session.query(User).filter_by(telegram_id=user_id).first()
+    if not user:
+        user = User(telegram_id=user_id, username=username)
+        session.add(user)
+        session.commit()
+    user_id = user.id
+    print(f"user_id in rate: enter_rating", user_id)
     new_rating = Rating(
         user_id=user_id, recommendation_id=recommendation_id, rating=rating)
     session.add(new_rating)
