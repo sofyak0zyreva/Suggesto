@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Float
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Float, BigInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from dotenv import load_dotenv
@@ -35,7 +35,7 @@ class Recommendation(Base):
     average_rating = Column(Float, default=0.0)
     
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    chat_id = Column(Integer, nullable=True)
+    chat_id = Column(BigInteger, nullable=True)
 
 
 class Rating(Base):
@@ -53,7 +53,7 @@ class Rating(Base):
 
 load_dotenv()
 # DATABASE_URL = "sqlite:///recommendations.db"
-DATABASE_URL = os.getenv('DATABASE_URL') or "sqlite:///recommendations.db"
+DATABASE_URL = os.getenv('DATABASE_URL') or "sqlite:///database.db"
 
 # Создание подключения к базе данных
 engine = create_engine(DATABASE_URL)
