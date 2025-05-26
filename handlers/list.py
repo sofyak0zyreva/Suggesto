@@ -118,13 +118,13 @@ async def enter_sorting(update: Update, context: CallbackContext) -> int:
         query_db = session.query(Recommendation).filter_by(
             category=category,
             user_id=user_id
-        ).all()
+        )
     else:
         # групповой чат: все рекомендации чата
         query_db = session.query(Recommendation).filter_by(
             category=category,
             chat_id=chat.id
-        ).all()
+        )
     # query_db = session.query(Recommendation).filter_by(
     #     category=category, user_id=user_id)
     if sorting == "rating":
